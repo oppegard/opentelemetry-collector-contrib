@@ -107,7 +107,7 @@ func (e *tracesExporter) pushTraceData(ctx context.Context, td pdata.Traces) err
 		resource := rspans.Resource()
 		for j := 0; j < rspans.ScopeSpans().Len(); j++ {
 			ispans := rspans.ScopeSpans().At(j)
-			transform := newTraceTransformer(resource)
+			transform := newTraceTransformer(resource, e.logger)
 
 			libraryName := ispans.Scope().Name()
 			libraryVersion := ispans.Scope().Version()

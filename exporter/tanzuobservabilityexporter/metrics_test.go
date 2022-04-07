@@ -1146,6 +1146,11 @@ func TestAttributesToTagsForMetrics(t *testing.T) {
 	attrMap = newMap(map[string]string{"k": "v", "source": "a_val"})
 	wfTags = attributesToTagsForMetrics(attrMap, "")
 	assert.Equal(t, map[string]string{"k": "v", "_source": "a_val"}, wfTags)
+
+	// 5. Drops tag with empty values, since TObs cannot accept them.
+	attrMap = newMap(map[string]string{"k": "v", "empty": ""})
+	wfTags = attributesToTagsForMetrics(attrMap, "")
+	assert.Equal(t, map[string]string{"k": "v"}, wfTags)
 }
 
 // Creates a histogram metric with len(countAttributeForEachDataPoint)

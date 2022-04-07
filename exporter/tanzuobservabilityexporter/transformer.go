@@ -23,17 +23,20 @@ import (
 	"github.com/wavefronthq/wavefront-sdk-go/senders"
 	"go.opentelemetry.io/collector/model/pdata"
 	conventions "go.opentelemetry.io/collector/model/semconv/v1.6.1"
+	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/tracetranslator"
 )
 
 type traceTransformer struct {
 	resAttrs pdata.Map
+	logger   *zap.Logger
 }
 
-func newTraceTransformer(resource pdata.Resource) *traceTransformer {
+func newTraceTransformer(resource pdata.Resource, logger *zap.Logger) *traceTransformer {
 	t := &traceTransformer{
 		resAttrs: resource.Attributes(),
+		logger:   logger,
 	}
 	return t
 }
@@ -94,6 +97,20 @@ func (t *traceTransformer) Span(orig pdata.Span) (span, error) {
 
 	if len(orig.TraceState()) > 0 {
 		tags[tracetranslator.TagW3CTraceState] = string(orig.TraceState())
+	}
+
+	// Delete tags with empty values
+	for k, v := range tags {
+		if v == "" {
+			// TODO: log.warn empty tag found out
+			t.logger.Warn("Dropped span tag with empty value",
+				zap.String("TraceID", traceID.String()),
+				zap.String("SpanID", spanID.String()),
+				zap.String("SpanName", orig.Name()),
+				zap.String("tag", k),
+			)
+			delete(tags, k)
+		}
 	}
 
 	return span{

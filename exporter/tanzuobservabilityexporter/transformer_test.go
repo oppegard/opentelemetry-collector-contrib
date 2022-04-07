@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/model/pdata"
 	conventions "go.opentelemetry.io/collector/model/semconv/v1.6.1"
+	"go.uber.org/zap"
 )
 
 func TestSpanStartTimeIsConvertedToMilliseconds(t *testing.T) {
@@ -323,6 +324,27 @@ func TestSpanForDroppedCount(t *testing.T) {
 	assert.Equal(t, "789", actual.Tags["otel.dropped_attributes_count"])
 }
 
+func TestEmptyAttrsAreDropped(t *testing.T) {
+	span := pdata.NewSpan()
+	span.SetSpanID(pdata.NewSpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1}))
+	span.SetTraceID(pdata.NewTraceID([16]byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}))
+	span.SetStartTimestamp(pdata.Timestamp(50000000))
+	span.Attributes().InsertString("s_empty", "")
+	span.Attributes().InsertString("s_nonempty", "val")
+
+	resAttrs := pdata.NewMap()
+	resAttrs.InsertString("r_empty", "")
+	resAttrs.InsertString("r_nonempty", "val")
+	transform := transformerFromAttributes(resAttrs)
+
+	actual, err := transform.Span(span)
+	require.NoError(t, err, "transforming span to wavefront format")
+	assert.NotContains(t, actual.Tags, "r_empty")
+	assert.NotContains(t, actual.Tags, "s_empty")
+	assert.Contains(t, actual.Tags, "r_nonempty")
+	assert.Contains(t, actual.Tags, "s_nonempty")
+}
+
 func TestGetSourceAndResourceTags(t *testing.T) {
 	resAttrs := pdata.NewMap()
 	resAttrs.InsertString(labelSource, "test_source")
@@ -387,6 +409,7 @@ func spanWithTraceState(state pdata.TraceState) pdata.Span {
 func transformerFromAttributes(attrs pdata.Map) *traceTransformer {
 	return &traceTransformer{
 		resAttrs: attrs,
+		logger:   zap.NewNop(),
 	}
 }
 

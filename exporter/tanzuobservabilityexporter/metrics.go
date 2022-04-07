@@ -642,7 +642,7 @@ func (s *summaryConsumer) Consume(mi metricInfo, errs *[]error) {
 	summary := mi.Summary()
 	summaryDataPoints := summary.DataPoints()
 	for i := 0; i < summaryDataPoints.Len(); i++ {
-		s.sendSummaryDataPoint(mi, summaryDataPoints.At(i), errs)
+		s.pushSummaryDataPoint(mi, summaryDataPoints.At(i), errs)
 	}
 }
 
@@ -651,7 +651,7 @@ func (*summaryConsumer) PushInternalMetrics(*[]error) {
 	// Do nothing
 }
 
-func (s *summaryConsumer) sendSummaryDataPoint(
+func (s *summaryConsumer) pushSummaryDataPoint(
 	mi metricInfo, summaryDataPoint pdata.SummaryDataPoint, errs *[]error,
 ) {
 	name := mi.Name()
